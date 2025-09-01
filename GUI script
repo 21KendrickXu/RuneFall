@@ -1,96 +1,88 @@
-# script fpor closing pages
+#script for opening and closing main menu
+-- Button reference
 local button = script.Parent
-local frame = button.Parent
-button.MouseButton1Click:Connect(function()
-	frame.Visible = false
-end)
 
-#script for tutorial and BGM page
-local button = script.Parent
-local settingsMenu = script.Parent.Parent:WaitForChild("TutorialFrame") 
+-- Settings menu reference
+local settingsMenu = script.Parent.Parent:WaitForChild("SettingsFrame")
+
+-- Toggle menu visibility on click
 button.MouseButton1Click:Connect(function()
 	settingsMenu.Visible = not settingsMenu.Visible
 end)
 
+#script for opening and closing tutorial page
+-- Button reference
 local button = script.Parent
-local settingsMenu = script.Parent.Parent:WaitForChild("BGMFrame") 
+
+-- Tutorial menu reference
+local settingsMenu = script.Parent.Parent:WaitForChild("TutorialFrame")
+
+-- Toggle tutorial visibility on click
 button.MouseButton1Click:Connect(function()
 	settingsMenu.Visible = not settingsMenu.Visible
 end)
 
-# script for backgorund music system
-local sound = game:GetService("SoundService"):WaitForChild("BackgroundMusic")
-local playPauseButton = script.Parent
+#script for colorblind filter
+-- Get the Lighting service
+local Lighting = game:GetService("Lighting")
 
-local function togglePlayPause()
-	if sound.IsPlaying then
-		sound:Pause()
-		playPauseButton.Text = "Music: Off"
-	else
-		sound:Play()
-		playPauseButton.Text = "Music: On"
-	end
-end
+-- Reference to the filter toggle button
+local FilterButton = script.Parent
 
-playPauseButton.Text = sound.IsPlaying and "Music: On" or "Music: Off"
-
-playPauseButton.MouseButton1Click:Connect(togglePlayPause)
-
-local sound = game:GetService("SoundService"):WaitForChild("BackgroundMusic")
-local TrackButton = script.Parent
-
-local tracks = {
-	{id = "rbxassetid://100958173074461", name = "1"},
-	{id = "rbxassetid://86813319012785", name = "2"},
-	{id = "rbxassetid://93013958793556", name = "3"},
+-- Define available filters (effect name in Lighting, and display name)
+local filters = {
+	{effectName = nil, name = "No filters"}, -- No filter applied
+	{effectName = "ColorCorrection-Red", name = "Red"}, -- Red filter
+	{effectName = "ColorCorrection-Blue", name = "Blue"}, -- Blue filter
+	{effectName = "ColorCorrection-Green", name = "Green"}, -- Green filter
 }
 
-local soundService = game:GetService("SoundService")
-if soundService:GetAttribute("CurrentTrackIndex") == nil then
-	soundService:SetAttribute("CurrentTrackIndex", 1)
+-- Initialize the current filter index if not already set
+if Lighting:GetAttribute("CurrentFilterIndex") == nil then
+	Lighting:SetAttribute("CurrentFilterIndex", 1)
 end
 
-local function switchTrack()
-	local currentIndex = soundService:GetAttribute("CurrentTrackIndex")
+-- Function to switch to the next filter in the list
+local function switchFilter()
+	-- Get the current index and move to the next
+	local currentIndex = Lighting:GetAttribute("CurrentFilterIndex")
 	currentIndex = currentIndex + 1
-	if currentIndex > #tracks then
-		currentIndex = 1
+	if currentIndex > #filters then
+		currentIndex = 1 -- Loop back to the first filter
+	end
+	Lighting:SetAttribute("CurrentFilterIndex", currentIndex)
+
+	-- Disable all filters in the list
+	for _, filter in ipairs(filters) do
+		if filter.effectName then
+			local effect = Lighting:FindFirstChild(filter.effectName)
+			if effect then
+				effect.Enabled = false
+			end
+		end
 	end
 
-	soundService:SetAttribute("CurrentTrackIndex", currentIndex)
-
-	local track = tracks[currentIndex]
-	sound.SoundId = track.id
-	if sound.IsPlaying then
-		sound:Play()
+	-- Enable the selected filter, if it has a valid effect name
+	local selected = filters[currentIndex]
+	if selected.effectName then
+		local effect = Lighting:FindFirstChild(selected.effectName)
+		if effect then
+			effect.Enabled = true
+		end
 	end
 
-	TrackButton.Text = "Track " .. track.name
+	-- Update the button text to show the current filter
+	FilterButton.Text = "Filter: " .. selected.name
 end
 
-local initialIndex = soundService:GetAttribute("CurrentTrackIndex")
-TrackButton.Text = "Track " .. tracks[initialIndex].name
+-- Set the initial button text based on the current filter
+local initialIndex = Lighting:GetAttribute("CurrentFilterIndex")
+FilterButton.Text = "Filter: " .. filters[initialIndex].name
 
-TrackButton.MouseButton1Click:Connect(switchTrack)
+-- Connect button click to switch filter function
+FilterButton.MouseButton1Click:Connect(switchFilter)
 
-local button = script.Parent
-local player = game.Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local bgm = game:GetService("SoundService"):WaitForChild("BackgroundMusic")
-
-local volumeLevels = {0, 0.1, 0.2, 0.5, 0.75, 0.8, 0.9, 1}
-local currentVolumeIndex = #volumeLevels
-
-local function updateButtonText()
-	button.Text = "Volume: " .. math.floor(bgm.Volume * 100) .. "%"
-end
-
-button.MouseButton1Click:Connect(function()
-	currentVolumeIndex = currentVolumeIndex % #volumeLevels + 1
-	bgm.Volume = volumeLevels[currentVolumeIndex]
-	updateButtonText()
-end)
-
+#script for tutorial page
 local steps = {
 	"Welcome to the game!",
 	"This game is called Shibuya Battleground",
@@ -108,6 +100,7 @@ local instructionLabel = script.Parent:WaitForChild("TextLabel")
 local NextPageButton = script.Parent:WaitForChild("NextPageButton")
 local LastPageButton = script.Parent:WaitForChild("LastPageButton")
 
+-- Update the displayed instruction and button states
 local function updateStep()
 	instructionLabel.Text = steps[currentStep]
 	LastPageButton.Visible = currentStep > 1
@@ -116,14 +109,17 @@ end
 
 updateStep()
 
+-- Handle clicking the Next button
 NextPageButton.MouseButton1Click:Connect(function()
 	if currentStep < #steps then
 		currentStep += 1
 		updateStep()
 	else
+		-- Hide tutorial on finish and reset
 		script.Parent.Visible = false
 		currentStep = 1
 		updateStep()
+		-- Mark tutorial completed for player
 		local player = game.Players.LocalPlayer
 		if player:FindFirstChild("HasCompletedTutorial") then
 			player.HasCompletedTutorial.Value = true
@@ -131,6 +127,7 @@ NextPageButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+-- Handle clicking the Last button
 LastPageButton.MouseButton1Click:Connect(function()
 	if currentStep > 1 then
 		currentStep -= 1
@@ -138,8 +135,96 @@ LastPageButton.MouseButton1Click:Connect(function()
 	end
 end)
 
+#script for volume
+local button = script.Parent
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local bgm = game:GetService("SoundService"):WaitForChild("BackgroundMusic")
+
+-- Predefined volume levels to cycle through
+local volumeLevels = {0, 0.1, 0.2, 0.5, 0.75, 0.8, 0.9, 1}
+local currentVolumeIndex = #volumeLevels  -- Start at max volume
+
+-- Update button text to show current volume percentage
+local function updateButtonText()
+	button.Text = "Volume: " .. math.floor(bgm.Volume * 100) .. "%"
+end
+
+-- Cycle through volume levels on button click
+button.MouseButton1Click:Connect(function()
+	currentVolumeIndex = currentVolumeIndex % #volumeLevels + 1
+	bgm.Volume = volumeLevels[currentVolumeIndex]
+	updateButtonText()
+end)
 
 updateButtonText()
 
+#script for switching tracks 
+local sound = game:GetService("SoundService"):WaitForChild("BackgroundMusic")
+local TrackButton = script.Parent
 
+-- List of tracks with asset IDs and display names
+local tracks = {
+	{id = "rbxassetid://100958173074461", name = "1"},
+	{id = "rbxassetid://86813319012785", name = "2"},
+	{id = "rbxassetid://93013958793556", name = "3"},
+}
 
+local soundService = game:GetService("SoundService")
+
+-- Initialize current track index if not set
+if soundService:GetAttribute("CurrentTrackIndex") == nil then
+	soundService:SetAttribute("CurrentTrackIndex", 1)
+end
+
+-- Switch to the next track in the list
+local function switchTrack()
+	local currentIndex = soundService:GetAttribute("CurrentTrackIndex")
+	currentIndex = currentIndex + 1
+	if currentIndex > #tracks then
+		currentIndex = 1 -- Loop back to first track
+	end
+
+	soundService:SetAttribute("CurrentTrackIndex", currentIndex)
+
+	local track = tracks[currentIndex]
+	sound.SoundId = track.id
+
+	-- Play the sound if it was already playing
+	if sound.IsPlaying then
+		sound:Play()
+	end
+
+	-- Update button text to current track name
+	TrackButton.Text = "Track " .. track.name
+end
+
+-- Set initial button text on script start
+local initialIndex = soundService:GetAttribute("CurrentTrackIndex")
+TrackButton.Text = "Track " .. tracks[initialIndex].name
+
+-- Connect button click to track switch
+TrackButton.MouseButton1Click:Connect(switchTrack)
+
+#script for playing music
+local sound = game:GetService("SoundService"):WaitForChild("BackgroundMusic")
+local playPauseButton = script.Parent
+
+-- Toggle music playback and update button text
+local function togglePlayPause()
+	if sound.IsPlaying then
+		sound:Pause()
+		playPauseButton.Text = "Music: Off"
+	else
+		sound:Play()
+		playPauseButton.Text = "Music: On"
+	end
+end
+
+-- Set initial button text based on music state
+playPauseButton.Text = sound.IsPlaying and "Music: On" or "Music: Off"
+
+-- Connect button click to toggle function
+playPauseButton.MouseButton1Click:Connect(togglePlayPause)
+
+#script for 
